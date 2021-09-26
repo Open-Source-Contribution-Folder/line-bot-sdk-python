@@ -23,6 +23,7 @@ from .actions import (  # noqa
     CameraAction,
     CameraRollAction,
     LocationAction,
+    RichMenuSwitchAction,
     Action as TemplateAction,  # backward compatibility
     PostbackAction as PostbackTemplateAction,  # backward compatibility
     MessageAction as MessageTemplateAction,  # backward compatibility
@@ -101,6 +102,7 @@ from .insight import (  # noqa
     MessageStatistics,
     MessageInsight,
     ClickInsight,
+    JobInsight,
 )
 
 from .limit import (  # noqa
@@ -153,6 +155,12 @@ from .responses import (  # noqa
     BotInfo,
     GetWebhookResponse,
     TestWebhookResponse,
+    AudienceGroup,
+    ClickAudienceGroup,
+    ImpAudienceGroup,
+    GetAuthorityLevel,
+    Audience,
+    CreateAudienceGroup,
 )
 from .rich_menu import (  # noqa
     RichMenu,
