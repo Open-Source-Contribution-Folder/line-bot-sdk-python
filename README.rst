@@ -22,7 +22,7 @@ Japanese: https://developers.line.biz/ja/docs/messaging-api/overview/
 Requirements
 ------------
 
--  Python >= 2.7 or >= 3.4
+-  Python >= 3.7
 
 Installation
 ------------
@@ -114,8 +114,8 @@ https://developers.line.biz/en/reference/messaging-api/#send-reply-message
 
     line_bot_api.reply_message(reply_token, TextSendMessage(text='Hello World!'))
 
-push\_message(self, to, messages, notification_disabled=False, timeout=None)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+push\_message(self, to, messages, notification_disabled=False, custom_aggregation_units=None, timeout=None)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Send messages to users, groups, and rooms at any time.
 
@@ -125,8 +125,8 @@ https://developers.line.biz/en/reference/messaging-api/#send-push-message
 
     line_bot_api.push_message(to, TextSendMessage(text='Hello World!'))
 
-multicast(self, to, messages, notification_disabled=False, timeout=None)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+multicast(self, to, messages, notification_disabled=False, custom_aggregation_units=None, timeout=None)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Send push messages to multiple users at any time. Messages cannot be sent to groups or rooms.
 
@@ -345,6 +345,27 @@ https://developers.line.biz/en/reference/messaging-api/#get-rich-menu
 
     rich_menu = line_bot_api.get_rich_menu(rich_menu_id)
     print(rich_menu.rich_menu_id)
+
+validate\_rich\_menu\_object(self, rich\_menu, timeout=None)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Validate a rich menu object.
+You can verify that a rich menu object is valid as a request body for creating rich menu.
+
+https://developers.line.biz/ja/reference/messaging-api/#validate-rich-menu-object
+
+.. code:: python
+
+    rich_menu_to_validate = RichMenu(
+        size=RichMenuSize(width=2500, height=843),
+        selected=False,
+        name="Nice richmenu",
+        chat_bar_text="Tap here",
+        areas=[RichMenuArea(
+            bounds=RichMenuBounds(x=0, y=0, width=2500, height=843),
+            action=URIAction(label='Go to line.me', uri='https://line.me'))]
+    )
+    line_bot_api.validate_rich_menu_object(rich_menu=rich_menu_to_validate)
 
 create\_rich\_menu(self, rich\_menu, timeout=None)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -590,9 +611,48 @@ https://developers.line.biz/en/reference/messaging-api/#get-message-event
     broadcast_response = line_bot_api.broadcast(TextSendMessage(text='Hello World!'))
     insight = line_bot_api.get_insight_message_event(broadcast_response.request_id)
     print(insight.overview)
-    
-get\_bot_info(self, timeout=None)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+get\_statistics\_per\_unit(self, custom_aggregation_unit, from_date, to_date, timeout=None)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Return statistics about how users interact with push and multicast messages.
+
+https://developers.line.biz/en/reference/partner-docs/#get-statistics-per-unit
+
+.. code:: python
+
+    unit_name = 'promotion_a'
+    line_bot_api.push_message('to', TextSendMessage(text='Hello World!'), custom_aggregation_units=unit_name)
+    insight = line_bot_api.get_statistics_per_unit(unit_name, '20210301', '20210331')
+    print(insight.overview)
+
+get\_number\_of\_units\_used\_this\_month(self, timeout=None)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Return the number of aggregation units used this month.
+
+https://developers.line.biz/en/reference/partner-docs/#get-number-of-units-used-this-month
+
+.. code:: python
+
+    usage = line_bot_api.get_number_of_units_used_this_month()
+    print(usage.num_of_custom_aggregation_units)
+
+get\_name\_list\_of\_units\_used\_this\_month(self, limit=100, start=None, timeout=None)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Return the name list of units used this month for statistics aggregation.
+
+https://developers.line.biz/en/reference/partner-docs/#get-name-list-of-units-used-this-month
+
+.. code:: python
+
+    name_list = line_bot_api.get_name_list_of_units_used_this_month()
+    print(name_list.custom_aggregation_units)
+    print(name_list.next)
+
+get\_bot\_info(self, timeout=None)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Get bot's basic information.
 
@@ -649,6 +709,19 @@ https://developers.line.biz/en/reference/messaging-api/#test-webhook-endpoint
     print(test_result.status_code)
     print(test_result.reason)
     print(test_result.detail)
+
+get\_followers\_ids(self, limit=300, start=None, timeout=None)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Get a list of users who added your LINE Official Account as a friend.
+
+https://developers.line.biz/en/reference/messaging-api/#get-follower-ids
+
+.. code:: python
+
+    test_result = line_bot_api.get_followers_ids()
+    print(test_result.user_ids)
+    print(test_result.next)
 
 ※ Error handling
 ^^^^^^^^^^^^^^^^^
@@ -973,6 +1046,14 @@ With QuickReply
                                        QuickReplyButton(action=MessageAction(label="label", text="text"))
                                    ]))
 
+With Sender
+^^^^^^^^^^^
+
+.. code:: python
+
+    text_message = TextSendMessage(text='Hello, world',
+                                   sender=Sender(name='name', icon_url='https://example.com/icon.jpg'))
+
 Webhook
 -------
 
@@ -1229,6 +1310,8 @@ Message
     - package\_id
     - sticker\_id
     - sticker\_resource\_type
+    - keywords
+    - text
 - FileMessage
     - type
     - id
@@ -1237,6 +1320,108 @@ Message
 
 Hints
 -----
+
+Experimental Asyncio support
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The LINE Messaging API SDK for Python includes experimental asyncio support.
+(API may change without notice in a future version)
+
+.. code:: python
+
+    import os
+    import sys
+    from argparse import ArgumentParser
+
+    import asyncio
+    import aiohttp
+    from aiohttp import web
+
+    import logging
+
+    from aiohttp.web_runner import TCPSite
+
+    from linebot import (
+        AsyncLineBotApi, WebhookParser
+    )
+    from linebot.aiohttp_async_http_client import AiohttpAsyncHttpClient
+    from linebot.exceptions import (
+        InvalidSignatureError
+    )
+    from linebot.models import (
+        MessageEvent, TextMessage, TextSendMessage,
+    )
+
+    # get channel_secret and channel_access_token from your environment variable
+    channel_secret = os.getenv('LINE_CHANNEL_SECRET', None)
+    channel_access_token = os.getenv('LINE_CHANNEL_ACCESS_TOKEN', None)
+    if channel_secret is None:
+        print('Specify LINE_CHANNEL_SECRET as environment variable.')
+        sys.exit(1)
+    if channel_access_token is None:
+        print('Specify LINE_CHANNEL_ACCESS_TOKEN as environment variable.')
+        sys.exit(1)
+
+
+    class Handler:
+        def __init__(self, line_bot_api, parser):
+            self.line_bot_api = line_bot_api
+            self.parser = parser
+
+        async def echo(self, request):
+            signature = request.headers['X-Line-Signature']
+            body = await request.text()
+
+            try:
+                events = self.parser.parse(body, signature)
+            except InvalidSignatureError:
+                return web.Response(status=400, text='Invalid signature')
+
+            for event in events:
+                if not isinstance(event, MessageEvent):
+                    continue
+                if not isinstance(event.message, TextMessage):
+                    continue
+
+                await self.line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=event.message.text)
+                )
+
+            return web.Response(text="OK\n")
+
+
+    async def main(port=8000):
+        session = aiohttp.ClientSession()
+        async_http_client = AiohttpAsyncHttpClient(session)
+        line_bot_api = AsyncLineBotApi(channel_access_token, async_http_client)
+        parser = WebhookParser(channel_secret)
+
+        handler = Handler(line_bot_api, parser)
+
+        app = web.Application()
+        app.add_routes([web.post('/callback', handler.echo)])
+
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = TCPSite(runner=runner, port=port)
+        await site.start()
+        while True:
+            await asyncio.sleep(3600)  # sleep forever
+
+
+    if __name__ == "__main__":
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+
+        arg_parser = ArgumentParser(
+            usage='Usage: python ' + __file__ + ' [--port <port>] [--help]'
+        )
+        arg_parser.add_argument('-p', '--port', type=int, default=8000, help='port')
+        options = arg_parser.parse_args()
+
+        asyncio.run(main(options.port))
+
+
 
 Examples
 ~~~~~~~~
@@ -1302,10 +1487,10 @@ Run tests
 
 Test by using tox. We test against the following versions.
 
--  3.6
 -  3.7
 -  3.8
 -  3.9
+-  3.10
 
 To run all tests and to run ``flake8`` against all versions, use:
 
@@ -1313,17 +1498,17 @@ To run all tests and to run ``flake8`` against all versions, use:
 
     tox
 
-To run all tests against version 3.6, use:
+To run all tests against version 3.7, use:
 
 ::
 
-    $ tox -e py3.6
+    $ tox -e py3.7
 
-To run a test against version 3.6 and against a specific file, use:
+To run a test against version 3.7 and against a specific file, use:
 
 ::
 
-    $ tox -e py3.6 -- tests/test_webhook.py
+    $ tox -e py3.7 -- tests/test_webhook.py
 
 
 .. |Build Status| image:: https://travis-ci.org/line/line-bot-sdk-python.svg?branch=master

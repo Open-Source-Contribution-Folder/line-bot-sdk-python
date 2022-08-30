@@ -80,7 +80,8 @@ from .flex_message import (  # noqa
     ImageComponent,
     SeparatorComponent,
     TextComponent,
-    SpanComponent
+    SpanComponent,
+    VideoComponent
 )
 from .imagemap import (  # noqa
     ImagemapSendMessage,
@@ -167,6 +168,7 @@ from .rich_menu import (  # noqa
     RichMenuSize,
     RichMenuArea,
     RichMenuBounds,
+    RichMenuAlias,
 )
 from .send_messages import (  # noqa
     SendMessage,
